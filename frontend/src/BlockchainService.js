@@ -14,30 +14,22 @@ async function init() {
   }
 
   web3 = new Web3(window.ethereum);
-  // request accounts + permission
   await window.ethereum.request({ method: "eth_requestAccounts" });
   accounts = await web3.eth.getAccounts();
   networkId = await web3.eth.net.getId();
 
-  console.log("MetaMask networkId:", networkId);
-  console.log("Accounts:", accounts);
-  console.log("Available networks in ABI JSON:", Object.keys(SupplyChain.networks));
-
   const deployed = SupplyChain.networks[networkId];
   if (!deployed) {
-    // build a helpful message listing deployed networks and addresses
     const avail = Object.entries(SupplyChain.networks)
       .map(([id, info]) => `${id} -> ${info.address}`)
       .join("\n");
     throw new Error(
       `Contract not deployed on network ${networkId}. Deployed networks:\n${avail}\n\n` +
-      `Make sure MetaMask is connected to Ganache (RPC http://127.0.0.1:7545, Chain/Network ID 5777), ` +
-      `and that you copied the latest build/contracts/SupplyChain.json to frontend/src/contracts/.`
+      `Make sure MetaMask is connected to Ganache and you copied the latest build/contracts/SupplyChain.json.`
     );
   }
 
   contract = new web3.eth.Contract(SupplyChain.abi, deployed.address);
-  console.log("Contract loaded at", deployed.address);
   return { web3, contract, accounts, networkId };
 }
 
@@ -63,6 +55,7 @@ async function ensureContract() {
   return contract;
 }
 
+// ✅ Functions
 export const createProduct = async (name, from) => {
   const c = await ensureContract();
   return await c.methods.createProduct(name).send({ from });
@@ -72,6 +65,11 @@ export const fetchProduct = async (sku) => {
   const c = await ensureContract();
   const res = await c.methods.fetchProduct(sku).call();
   return { sku: res[0], name: res[1], owner: res[2], state: parseInt(res[3]) };
+};
+
+export const getProductCounter = async () => {
+  const c = await ensureContract();
+  return await c.methods.productCounter().call();
 };
 
 export const markForSale = async (sku, from) => {
